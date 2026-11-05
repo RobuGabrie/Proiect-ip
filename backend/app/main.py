@@ -5,7 +5,7 @@ from fastapi.responses import JSONResponse
 
 from app import database
 from app.config import settings
-from app.controllers import auth, users
+from app.controllers import approvals, auth, categories, reservations, resources, users, waitlist
 from app.errors import ApiError
 
 API_PREFIX = "/api/v1"
@@ -25,8 +25,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(auth.router, prefix=API_PREFIX)
-app.include_router(users.router, prefix=API_PREFIX)
+for module in (auth, users, categories, resources, reservations, approvals, waitlist):
+    app.include_router(module.router, prefix=API_PREFIX)
 
 
 @app.exception_handler(ApiError)

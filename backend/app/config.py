@@ -11,6 +11,10 @@ class Settings(BaseSettings):
     google_allowed_domain: str = "student.usv.ro"
     jwt_secret: str = Field(min_length=32)
     jwt_expires_seconds: int = 3600
+    timezone: str = "Europe/Bucharest"
+    smtp_host: str = ""
+    smtp_port: int = 1025
+    email_from: str = "rrm@student.usv.ro"
 
     @property
     def cors_origin_list(self) -> list[str]:

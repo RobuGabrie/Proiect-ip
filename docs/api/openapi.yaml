@@ -419,7 +419,7 @@ paths:
     get:
       tags: [Resources]
       summary: Disponibilitatea pe sloturi de 30 de minute
-      description: Stările se calculează din program, rezervări și mentenanță. Alimentează calendarul resursei.
+      description: Returnează doar sloturile din programul de funcționare, cu starea calculată din rezervări și mentenanță. Alimentează calendarul resursei.
       operationId: getResourceAvailability
       parameters:
         - $ref: '#/components/parameters/ResourceId'
@@ -1098,7 +1098,7 @@ components:
       enum: [PENDING, AWAITING_TRAINING, APPROVED, REJECTED, CANCELLED, COMPLETED]
     SlotStatus:
       type: string
-      enum: [LIBER, PARTIAL, OCUPAT, MENTENANTA, IN_AFARA_PROGRAMULUI]
+      enum: [LIBER, PARTIAL, OCUPAT, MENTENANTA]
     GoogleLoginRequest:
       type: object
       required: [idToken]

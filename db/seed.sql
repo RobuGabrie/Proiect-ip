@@ -1,4 +1,10 @@
 -- Date de test pentru demonstrație. Resursele și persoanele provin din prototipul Figma.
+-- Rezervările sunt relative la luni, săptămâna viitoare, ca demonstrația să nu expire.
+
+CREATE FUNCTION pg_temp.demo_week() RETURNS timestamptz
+LANGUAGE sql STABLE AS $$
+    SELECT (date_trunc('week', now() AT TIME ZONE 'Europe/Bucharest') + interval '7 days') AT TIME ZONE 'Europe/Bucharest'
+$$;
 
 INSERT INTO users (google_sub, email, nume, prenume, role) VALUES
     ('seed-admin-maria',   'maria.ionescu@example.ro',            'Ionescu',    'Maria',  'ADMIN'),
@@ -49,18 +55,18 @@ INSERT INTO teams (nume) VALUES ('Echipa Robotică'), ('Echipa Materiale'), ('Ec
 
 INSERT INTO reservations (resource_id, user_id, team_id, decided_by, data_inceput, data_sfarsit, scop,
                           status, prima_rezervare, necesita_instruire, motiv_respingere, data_decizie)
-SELECT r.id, u.id, t.id, a.id, v.inceput::timestamptz, v.sfarsit::timestamptz, v.scop,
+SELECT r.id, u.id, t.id, a.id, pg_temp.demo_week() + v.inceput::interval, pg_temp.demo_week() + v.sfarsit::interval, v.scop,
        v.status::reservation_status, v.prima, v.instruire, v.motiv,
-       CASE WHEN a.id IS NOT NULL THEN TIMESTAMPTZ '2026-11-05 10:00+02' END
+       CASE WHEN a.id IS NOT NULL THEN now() END
 FROM (VALUES
-    ('C202',              'andrei.popescu@student.example.ro', 'Echipa Robotică',    'maria.ionescu@example.ro', '2026-11-12 12:00+02', '2026-11-12 14:00+02', 'Testare braț robotic',   'APPROVED', true,  false, NULL),
-    ('Imprimantă 3D',     'andrei.popescu@student.example.ro', 'Echipa Robotică',    NULL,                       '2026-11-13 08:00+02', '2026-11-13 10:00+02', 'Printare piese',         'PENDING',  true,  false, NULL),
-    ('Robot colaborativ', 'elena.vasile@example.ro',           'Echipa Robotică',    'a.popescu@example.ro',     '2026-11-16 18:00+02', '2026-11-16 20:00+02', 'Experiment colaborativ', 'APPROVED', false, false, NULL),
-    ('D205',              'radu.tudor@student.example.ro',     'Echipa Electronică', 'maria.ionescu@example.ro', '2026-11-10 10:00+02', '2026-11-10 12:00+02', 'Seminar',                'REJECTED', false, false, 'Sala este rezervată pentru examen.'),
-    ('Osciloscop',        'andrei.popescu@student.example.ro', 'Echipa Electronică', 'a.popescu@example.ro',     '2026-11-17 14:00+02', '2026-11-17 16:00+02', 'Măsurători',             'APPROVED', false, false, NULL),
-    ('B110',              'andrei.popescu@student.example.ro', 'Echipa Robotică',    NULL,                       '2026-11-18 09:00+02', '2026-11-18 11:00+02', 'Prezentare proiect',     'PENDING',  true,  false, NULL),
-    ('Microscop electronic', 'dan.constantin@example.ro',      'Echipa Materiale',   NULL,                       '2026-11-19 12:00+02', '2026-11-19 14:00+02', 'Analiză probe',          'AWAITING_TRAINING', true, true, NULL),
-    ('Spectrometru FTIR', 'dan.constantin@example.ro',         'Echipa Materiale',   NULL,                       '2026-11-20 08:00+02', '2026-11-20 10:00+02', 'Analiză spectru',        'PENDING',  true,  false, NULL)
+    ('C202',              'andrei.popescu@student.example.ro', 'Echipa Robotică',    'maria.ionescu@example.ro', '3 days 12 hours', '3 days 14 hours', 'Testare braț robotic',   'APPROVED', true,  false, NULL),
+    ('Imprimantă 3D',     'andrei.popescu@student.example.ro', 'Echipa Robotică',    NULL,                       '4 days 08 hours', '4 days 10 hours', 'Printare piese',         'PENDING',  true,  false, NULL),
+    ('Robot colaborativ', 'elena.vasile@example.ro',           'Echipa Robotică',    'a.popescu@example.ro',     '7 days 18 hours', '7 days 20 hours', 'Experiment colaborativ', 'APPROVED', false, false, NULL),
+    ('D205',              'radu.tudor@student.example.ro',     'Echipa Electronică', 'maria.ionescu@example.ro', '1 day 10 hours', '1 day 12 hours', 'Seminar',                'REJECTED', false, false, 'Sala este rezervată pentru examen.'),
+    ('Osciloscop',        'andrei.popescu@student.example.ro', 'Echipa Electronică', 'a.popescu@example.ro',     '8 days 14 hours', '8 days 16 hours', 'Măsurători',             'APPROVED', false, false, NULL),
+    ('B110',              'andrei.popescu@student.example.ro', 'Echipa Robotică',    NULL,                       '9 days 09 hours', '9 days 11 hours', 'Prezentare proiect',     'PENDING',  true,  false, NULL),
+    ('Microscop electronic', 'dan.constantin@example.ro',      'Echipa Materiale',   NULL,                       '10 days 12 hours', '10 days 14 hours', 'Analiză probe',          'AWAITING_TRAINING', true, true, NULL),
+    ('Spectrometru FTIR', 'dan.constantin@example.ro',         'Echipa Materiale',   NULL,                       '11 days 08 hours', '11 days 10 hours', 'Analiză spectru',        'PENDING',  true,  false, NULL)
 ) AS v(resursa, solicitant, echipa, admin, inceput, sfarsit, scop, status, prima, instruire, motiv)
 JOIN resources r ON r.nume = v.resursa
 JOIN users u ON u.email = v.solicitant
@@ -73,16 +79,16 @@ FROM users u, resources r, users a
 WHERE u.email = 'elena.vasile@example.ro' AND r.nume = 'Robot colaborativ' AND a.email = 'a.popescu@example.ro';
 
 INSERT INTO maintenance_windows (resource_id, created_by, data_inceput, data_sfarsit, motiv)
-SELECT r.id, a.id, '2026-11-23 08:00+02', '2026-11-23 18:00+02', 'Calibrare anuală'
+SELECT r.id, a.id, pg_temp.demo_week() + interval '14 days 08 hours', pg_temp.demo_week() + interval '14 days 18 hours', 'Calibrare anuală'
 FROM resources r, users a
 WHERE r.nume = 'Spectrometru FTIR' AND a.email = 'a.popescu@example.ro';
 
 INSERT INTO waitlist_entries (user_id, resource_id, data_inceput, data_sfarsit)
-SELECT u.id, r.id, '2026-11-17 14:00+02', '2026-11-17 16:00+02'
+SELECT u.id, r.id, pg_temp.demo_week() + interval '8 days 14 hours', pg_temp.demo_week() + interval '8 days 16 hours'
 FROM users u, resources r
 WHERE u.email = 'radu.tudor@student.example.ro' AND r.nume = 'Osciloscop';
 
 INSERT INTO notifications (user_id, reservation_id, tip, mesaj, data_trimitere)
-SELECT res.user_id, res.id, 'APROBARE', 'Rezervarea ta a fost aprobată.', TIMESTAMPTZ '2026-11-05 10:00+02'
+SELECT res.user_id, res.id, 'APROBARE', 'Rezervarea ta a fost aprobată.', now()
 FROM reservations res
 WHERE res.status = 'APPROVED';

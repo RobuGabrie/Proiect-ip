@@ -2,9 +2,10 @@
 
 import Script from "next/script";
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ApiError, apiFetch, type AuthResponse } from "@/lib/api";
 import { saveToken } from "@/lib/session";
+import { homePath, useAuth } from "./AuthProvider";
 import styles from "./GoogleSignIn.module.css";
 
 type CredentialResponse = { credential: string };
@@ -32,8 +33,15 @@ const CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
 
 export function GoogleSignIn() {
   const router = useRouter();
+  const { user, loading, refresh } = useAuth();
   const buttonRef = useRef<HTMLDivElement>(null);
   const [error, setError] = useState(CLIENT_ID ? "" : "Autentificarea Google nu este configurată.");
+
+  useEffect(() => {
+    if (!loading && user) {
+      router.replace(homePath(user));
+    }
+  }, [loading, user, router]);
 
   async function handleCredential({ credential }: CredentialResponse) {
     setError("");
@@ -43,7 +51,7 @@ export function GoogleSignIn() {
         body: JSON.stringify({ idToken: credential }),
       });
       saveToken(accessToken);
-      router.replace("/");
+      await refresh();
     } catch (cause) {
       setError(cause instanceof ApiError ? cause.message : "Serverul nu răspunde. Încearcă din nou.");
     }
