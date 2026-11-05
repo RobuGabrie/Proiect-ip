@@ -1,0 +1,1525 @@
+openapi: 3.0.3
+info:
+  title: Research Resource Manager API
+  version: 1.0.0
+  description: |
+    API REST pentru programarea resurselor de cercetare (săli și echipamente) dintr-o universitate.
+
+    **Autentificare:** exclusiv cu Google. Frontend-ul obține un ID token Google și îl trimite la
+    `POST /auth/google`; răspunsul conține un JWT care se transmite la celelalte cereri în antetul
+    `Authorization: Bearer <token>`.
+
+    **Rezervări:** intervalele sunt formate din sloturi întregi de 30 de minute. Cererile în starea
+    `PENDING` sau `AWAITING_TRAINING` și rezervările `APPROVED` ocupă capacitatea resursei.
+
+    **Coduri de eroare:** `400` date invalide, `401` neautentificat, `403` fără drepturi,
+    `404` inexistent, `409` conflict cu starea curentă, `422` regulă de business încălcată
+    (mentenanță, în afara programului, instruire nefinalizată).
+servers:
+  - url: http://localhost:8000/api/v1
+    description: Mediu local de dezvoltare
+tags:
+  - name: Auth
+    description: Autentificare Google
+  - name: Users
+    description: Profil și roluri
+  - name: Categories
+    description: Categorii de resurse
+  - name: Resources
+    description: Catalog, administrare, program, disponibilitate și mentenanță
+  - name: Reservations
+    description: Cereri de rezervare ale utilizatorului
+  - name: Approvals
+    description: Fluxul administratorului pentru cererile primite
+  - name: Waitlist
+    description: Lista de așteptare
+security:
+  - bearerAuth: []
+paths:
+  /auth/google:
+    post:
+      tags: [Auth]
+      summary: Autentificare cu un ID token Google
+      description: La prima autentificare se creează utilizatorul, cu rolul implicit `STUDENT`.
+      operationId: loginWithGoogle
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GoogleLoginRequest'
+      responses:
+        '200':
+          description: Autentificare reușită
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /users/me:
+    get:
+      tags: [Users]
+      summary: Profilul utilizatorului curent
+      operationId: getCurrentUser
+      responses:
+        '200':
+          description: Profilul utilizatorului
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    patch:
+      tags: [Users]
+      summary: Modifică numele din profil
+      description: Rolul nu poate fi modificat de utilizator, iar emailul provine din contul Google.
+      operationId: updateCurrentUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserProfileUpdate'
+      responses:
+        '200':
+          description: Profil actualizat
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /users:
+    get:
+      tags: [Users]
+      summary: Listează utilizatorii (administrator)
+      operationId: listUsers
+      parameters:
+        - name: q
+          in: query
+          description: Caută după nume sau email
+          schema:
+            type: string
+        - name: role
+          in: query
+          schema:
+            $ref: '#/components/schemas/Role'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Pagină de utilizatori
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /users/{userId}/role:
+    put:
+      tags: [Users]
+      summary: Schimbă rolul unui utilizator (administrator)
+      description: Conturile de administrator sunt desemnate de un administrator existent.
+      operationId: updateUserRole
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRoleUpdate'
+      responses:
+        '200':
+          description: Rol actualizat
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /categories:
+    get:
+      tags: [Categories]
+      summary: Listează categoriile de resurse
+      operationId: listCategories
+      responses:
+        '200':
+          description: Lista categoriilor
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Category'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [Categories]
+      summary: Creează o categorie (administrator)
+      operationId: createCategory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoryInput'
+      responses:
+        '201':
+          description: Categorie creată
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /categories/{categoryId}:
+    parameters:
+      - $ref: '#/components/parameters/CategoryId'
+    put:
+      tags: [Categories]
+      summary: Modifică o categorie (administrator)
+      operationId: updateCategory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoryInput'
+      responses:
+        '200':
+          description: Categorie actualizată
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+    delete:
+      tags: [Categories]
+      summary: Șterge o categorie (administrator)
+      description: O categorie care are resurse asociate nu poate fi ștearsă.
+      operationId: deleteCategory
+      responses:
+        '204':
+          description: Categorie ștearsă
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /resources:
+    get:
+      tags: [Resources]
+      summary: Listează catalogul de resurse
+      operationId: listResources
+      parameters:
+        - name: tip
+          in: query
+          description: Paginile „Săli” și „Echipamente” filtrează după acest câmp
+          schema:
+            $ref: '#/components/schemas/ResourceType'
+        - name: categoryId
+          in: query
+          schema:
+            type: integer
+            format: int64
+        - name: q
+          in: query
+          description: Caută după nume, categorie sau locație
+          schema:
+            type: string
+        - name: disponibilitate
+          in: query
+          description: Filtrele „Libere” și „Rezervate”, calculate pentru momentul curent
+          schema:
+            $ref: '#/components/schemas/CurrentAvailability'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Pagină de resurse
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResourcePage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [Resources]
+      summary: Înregistrează o resursă (administrator)
+      operationId: createResource
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResourceInput'
+      responses:
+        '201':
+          description: Resursă creată
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Resource'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /resources/{resourceId}:
+    parameters:
+      - $ref: '#/components/parameters/ResourceId'
+    get:
+      tags: [Resources]
+      summary: Detaliile unei resurse
+      operationId: getResource
+      responses:
+        '200':
+          description: Resursa cerută
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Resource'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Resources]
+      summary: Modifică o resursă (administratorul resursei)
+      operationId: updateResource
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResourceInput'
+      responses:
+        '200':
+          description: Resursă actualizată
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Resource'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Resources]
+      summary: Dezactivează o resursă (administratorul resursei)
+      description: Resursa trece în starea `INACTIVE`, iar istoricul rezervărilor se păstrează.
+      operationId: deactivateResource
+      responses:
+        '204':
+          description: Resursă dezactivată
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /resources/{resourceId}/schedule:
+    parameters:
+      - $ref: '#/components/parameters/ResourceId'
+    get:
+      tags: [Resources]
+      summary: Programul de funcționare al resursei
+      operationId: getResourceSchedule
+      responses:
+        '200':
+          description: Intervalele de funcționare
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ScheduleInterval'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Resources]
+      summary: Înlocuiește programul de funcționare (administratorul resursei)
+      operationId: replaceResourceSchedule
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              minItems: 1
+              items:
+                $ref: '#/components/schemas/ScheduleInterval'
+      responses:
+        '200':
+          description: Program actualizat
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ScheduleInterval'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /resources/{resourceId}/availability:
+    get:
+      tags: [Resources]
+      summary: Disponibilitatea pe sloturi de 30 de minute
+      description: Stările se calculează din program, rezervări și mentenanță. Alimentează calendarul resursei.
+      operationId: getResourceAvailability
+      parameters:
+        - $ref: '#/components/parameters/ResourceId'
+        - name: from
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          required: true
+          description: Ultima zi inclusă în răspuns
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Sloturile din interval
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Slot'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /resources/{resourceId}/maintenance-windows:
+    parameters:
+      - $ref: '#/components/parameters/ResourceId'
+    get:
+      tags: [Resources]
+      summary: Perioadele de mentenanță ale resursei
+      operationId: listMaintenanceWindows
+      responses:
+        '200':
+          description: Perioadele active
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MaintenanceWindow'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [Resources]
+      summary: Marchează resursa în mentenanță (administratorul resursei)
+      description: Rezervările existente din interval sunt marcate pentru reanalizare.
+      operationId: createMaintenanceWindow
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MaintenanceWindowInput'
+      responses:
+        '201':
+          description: Perioadă creată
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MaintenanceWindowCreated'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /maintenance-windows/{windowId}:
+    delete:
+      tags: [Resources]
+      summary: Anulează o perioadă de mentenanță (administratorul resursei)
+      operationId: cancelMaintenanceWindow
+      parameters:
+        - name: windowId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '204':
+          description: Perioadă anulată
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /reservations:
+    get:
+      tags: [Reservations]
+      summary: Rezervările utilizatorului curent
+      operationId: listMyReservations
+      parameters:
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/ReservationStatus'
+        - name: q
+          in: query
+          description: Caută după resursă sau dată
+          schema:
+            type: string
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Pagină de rezervări
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReservationPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [Reservations]
+      summary: Creează o cerere de rezervare
+      description: |
+        Cererea pornește în starea `PENDING` și așteaptă decizia administratorului resursei.
+        Dacă nu mai este loc, răspunsul este `409` cu codul `SLOT_OCUPAT`, iar interfața oferă
+        înscrierea pe lista de așteptare.
+      operationId: createReservation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReservationInput'
+      responses:
+        '201':
+          description: Cerere creată
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reservation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/BusinessRule'
+  /reservations/{reservationId}:
+    get:
+      tags: [Reservations]
+      summary: Detaliile unei rezervări
+      description: Accesibilă solicitantului și administratorilor resursei.
+      operationId: getReservation
+      parameters:
+        - $ref: '#/components/parameters/ReservationId'
+      responses:
+        '200':
+          description: Rezervarea cerută
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reservation'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /reservations/{reservationId}/cancel:
+    post:
+      tags: [Reservations]
+      summary: Anulează o rezervare
+      description: |
+        Solicitantul poate anula înainte de începerea slotului, iar administratorul resursei oricând.
+        Anularea trimite email persoanelor de pe lista de așteptare.
+      operationId: cancelReservation
+      parameters:
+        - $ref: '#/components/parameters/ReservationId'
+      responses:
+        '200':
+          description: Rezervare anulată
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reservation'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /reservations/{reservationId}/reschedule:
+    post:
+      tags: [Approvals]
+      summary: Reprogramează o rezervare (administratorul resursei)
+      description: Folosită pentru rezervările marcate pentru reanalizare din cauza unei mentenanțe.
+      operationId: rescheduleReservation
+      parameters:
+        - $ref: '#/components/parameters/ReservationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RescheduleInput'
+      responses:
+        '200':
+          description: Rezervare reprogramată
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reservation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/BusinessRule'
+  /approvals:
+    get:
+      tags: [Approvals]
+      summary: Cererile pentru resursele administrate
+      operationId: listApprovals
+      parameters:
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/ReservationStatus'
+        - name: resourceId
+          in: query
+          schema:
+            type: integer
+            format: int64
+        - name: necesitaReanalizare
+          in: query
+          schema:
+            type: boolean
+        - name: q
+          in: query
+          description: Caută după solicitant sau resursă
+          schema:
+            type: string
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Pagină de cereri
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReservationPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /approvals/stats:
+    get:
+      tags: [Approvals]
+      summary: Indicatorii paginii „Aprobări”
+      operationId: getApprovalStats
+      responses:
+        '200':
+          description: Indicatori pentru resursele administrate
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApprovalStats'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /approvals/usage:
+    get:
+      tags: [Approvals]
+      summary: Utilizarea resurselor pe echipe
+      description: Informativ, pentru decizia administratorului. Sistemul nu impune limite de utilizare.
+      operationId: getTeamUsage
+      parameters:
+        - name: resourceId
+          in: query
+          schema:
+            type: integer
+            format: int64
+        - name: from
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Utilizarea pe fiecare echipă
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TeamUsage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /approvals/{reservationId}/approve:
+    post:
+      tags: [Approvals]
+      summary: Aprobă o cerere
+      description: |
+        Permisă din `PENDING`, sau din `AWAITING_TRAINING` după confirmarea instruirii.
+        Fără instruire confirmată, răspunsul este `422`.
+      operationId: approveReservation
+      parameters:
+        - $ref: '#/components/parameters/ReservationId'
+      responses:
+        '200':
+          description: Cerere aprobată
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reservation'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/BusinessRule'
+  /approvals/{reservationId}/reject:
+    post:
+      tags: [Approvals]
+      summary: Respinge o cerere, cu motiv obligatoriu
+      operationId: rejectReservation
+      parameters:
+        - $ref: '#/components/parameters/ReservationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RejectInput'
+      responses:
+        '200':
+          description: Cerere respinsă
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reservation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /approvals/{reservationId}/require-training:
+    post:
+      tags: [Approvals]
+      summary: Condiționează aprobarea de o instruire
+      description: Cererea trece din `PENDING` în `AWAITING_TRAINING`.
+      operationId: requireTraining
+      parameters:
+        - $ref: '#/components/parameters/ReservationId'
+      responses:
+        '200':
+          description: Cerere în așteptarea instruirii
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reservation'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /approvals/{reservationId}/complete-training:
+    post:
+      tags: [Approvals]
+      summary: Confirmă finalizarea instruirii
+      description: |
+        Instruirea rămâne înregistrată pentru perechea utilizator–resursă, deci nu se repetă la
+        următoarele rezervări. Cererea rămâne în `AWAITING_TRAINING` până la aprobare.
+      operationId: completeTraining
+      parameters:
+        - $ref: '#/components/parameters/ReservationId'
+      responses:
+        '200':
+          description: Instruire confirmată
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reservation'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /waitlist:
+    get:
+      tags: [Waitlist]
+      summary: Înscrierile active ale utilizatorului curent
+      operationId: listMyWaitlistEntries
+      responses:
+        '200':
+          description: Lista înscrierilor
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WaitlistEntry'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [Waitlist]
+      summary: Înscriere pe lista de așteptare (NICE TO HAVE)
+      operationId: joinWaitlist
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WaitlistInput'
+      responses:
+        '201':
+          description: Înscriere creată
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WaitlistEntry'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /waitlist/{entryId}:
+    delete:
+      tags: [Waitlist]
+      summary: Renunță la o înscriere
+      operationId: leaveWaitlist
+      parameters:
+        - name: entryId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '204':
+          description: Înscriere ștearsă
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    UserId:
+      name: userId
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+    CategoryId:
+      name: categoryId
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+    ResourceId:
+      name: resourceId
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+    ReservationId:
+      name: reservationId
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+    Page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    PageSize:
+      name: pageSize
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+  responses:
+    BadRequest:
+      description: Date invalide
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: DATE_INVALIDE
+            message: Motivul respingerii este obligatoriu.
+    Unauthorized:
+      description: Utilizator neautentificat sau sesiune expirată
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: NEAUTENTIFICAT
+            message: Autentifică-te din nou cu contul Google.
+    Forbidden:
+      description: Utilizatorul nu are drepturi pentru această operație
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: ACCES_INTERZIS
+            message: Doar administratorul resursei poate face această operație.
+    NotFound:
+      description: Elementul nu există
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: NEGASIT
+            message: Elementul cerut nu există.
+    Conflict:
+      description: Operația intră în conflict cu starea curentă
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            slotOcupat:
+              summary: Capacitatea este atinsă
+              value:
+                code: SLOT_OCUPAT
+                message: Slotul este ocupat. Te poți înscrie pe lista de așteptare.
+            tranzitieInterzisa:
+              summary: Tranziție de stare nepermisă
+              value:
+                code: TRANZITIE_INTERZISA
+                message: Cererea a fost anulată între timp.
+            suprapunereMentenanta:
+              summary: Mentenanțe suprapuse
+              value:
+                code: SUPRAPUNERE_MENTENANTA
+                message: Intervalul se suprapune cu o altă mentenanță.
+    BusinessRule:
+      description: Cererea este validă, dar încalcă o regulă de business
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            mentenanta:
+              summary: Resursă în mentenanță
+              value:
+                code: RESURSA_IN_MENTENANTA
+                message: Resursa este în mentenanță în intervalul ales.
+            program:
+              summary: În afara programului
+              value:
+                code: IN_AFARA_PROGRAMULUI
+                message: Intervalul este în afara programului de funcționare.
+            instruire:
+              summary: Instruire nefinalizată
+              value:
+                code: INSTRUIRE_NEFINALIZATA
+                message: Instruirea nu a fost confirmată.
+  schemas:
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          description: Cod stabil, folosit de frontend pentru tratarea erorii
+        message:
+          type: string
+          description: Mesaj afișat utilizatorului
+    PageInfo:
+      type: object
+      required: [page, pageSize, total]
+      properties:
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        total:
+          type: integer
+    Role:
+      type: string
+      enum: [STUDENT, CADRU_DIDACTIC, CERCETATOR, ADMIN]
+    ResourceType:
+      type: string
+      enum: [SALA, ECHIPAMENT]
+    ResourceStatus:
+      type: string
+      enum: [ACTIVE, MAINTENANCE, INACTIVE]
+    CurrentAvailability:
+      type: string
+      enum: [LIBERA, REZERVATA]
+    ReservationStatus:
+      type: string
+      enum: [PENDING, AWAITING_TRAINING, APPROVED, REJECTED, CANCELLED, COMPLETED]
+    SlotStatus:
+      type: string
+      enum: [LIBER, PARTIAL, OCUPAT, MENTENANTA, IN_AFARA_PROGRAMULUI]
+    GoogleLoginRequest:
+      type: object
+      required: [idToken]
+      properties:
+        idToken:
+          type: string
+          description: ID token emis de Google pentru aplicație
+    AuthResponse:
+      type: object
+      required: [accessToken, tokenType, expiresIn, user]
+      properties:
+        accessToken:
+          type: string
+        tokenType:
+          type: string
+          example: bearer
+        expiresIn:
+          type: integer
+          description: Durata de viață a token-ului, în secunde
+          example: 3600
+        user:
+          $ref: '#/components/schemas/User'
+    User:
+      type: object
+      required: [id, email, nume, prenume, role]
+      properties:
+        id:
+          type: integer
+          format: int64
+        email:
+          type: string
+          format: email
+          example: andrei.popescu@student.example.ro
+        nume:
+          type: string
+          example: Popescu
+        prenume:
+          type: string
+          example: Andrei
+        role:
+          $ref: '#/components/schemas/Role'
+    UserPage:
+      allOf:
+        - $ref: '#/components/schemas/PageInfo'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/User'
+    UserProfileUpdate:
+      type: object
+      properties:
+        nume:
+          type: string
+          minLength: 1
+          maxLength: 100
+        prenume:
+          type: string
+          minLength: 1
+          maxLength: 100
+    UserRoleUpdate:
+      type: object
+      required: [role]
+      properties:
+        role:
+          $ref: '#/components/schemas/Role'
+    PersonSummary:
+      type: object
+      required: [id, nume, prenume]
+      properties:
+        id:
+          type: integer
+          format: int64
+        nume:
+          type: string
+        prenume:
+          type: string
+    CategoryInput:
+      type: object
+      required: [nume]
+      properties:
+        nume:
+          type: string
+          maxLength: 100
+          example: Imprimante 3D
+        descriere:
+          type: string
+          nullable: true
+    Category:
+      allOf:
+        - $ref: '#/components/schemas/CategoryInput'
+        - type: object
+          required: [id]
+          properties:
+            id:
+              type: integer
+              format: int64
+    ResourceInput:
+      type: object
+      required: [categoryId, tip, nume, maxEchipeSimultane, adminIds]
+      properties:
+        categoryId:
+          type: integer
+          format: int64
+        tip:
+          $ref: '#/components/schemas/ResourceType'
+        nume:
+          type: string
+          maxLength: 150
+          example: Robot colaborativ
+        descriere:
+          type: string
+          nullable: true
+          example: Robotică
+        locatie:
+          type: string
+          nullable: true
+          example: C202
+        etaj:
+          type: integer
+          nullable: true
+          example: 2
+        locuri:
+          type: integer
+          nullable: true
+          minimum: 1
+          description: Numărul de locuri al unei săli; nu este capacitatea în echipe
+        echipare:
+          type: string
+          nullable: true
+        model:
+          type: string
+          nullable: true
+          example: UR5e
+        maxEchipeSimultane:
+          type: integer
+          minimum: 1
+          maximum: 2
+          default: 1
+        durataMaximaMin:
+          type: integer
+          nullable: true
+          minimum: 30
+          multipleOf: 30
+          description: Durata maximă a unei rezervări, în minute. Lipsește când nu există limită.
+        necesitaInstruire:
+          type: boolean
+          default: false
+        status:
+          $ref: '#/components/schemas/ResourceStatus'
+        adminIds:
+          type: array
+          minItems: 1
+          items:
+            type: integer
+            format: int64
+    Resource:
+      type: object
+      required: [id, category, tip, nume, maxEchipeSimultane, necesitaInstruire, status, administratori, disponibilitateCurenta]
+      properties:
+        id:
+          type: integer
+          format: int64
+        category:
+          $ref: '#/components/schemas/Category'
+        tip:
+          $ref: '#/components/schemas/ResourceType'
+        nume:
+          type: string
+        descriere:
+          type: string
+          nullable: true
+        locatie:
+          type: string
+          nullable: true
+        etaj:
+          type: integer
+          nullable: true
+        locuri:
+          type: integer
+          nullable: true
+        echipare:
+          type: string
+          nullable: true
+        model:
+          type: string
+          nullable: true
+        maxEchipeSimultane:
+          type: integer
+        durataMaximaMin:
+          type: integer
+          nullable: true
+        necesitaInstruire:
+          type: boolean
+        status:
+          $ref: '#/components/schemas/ResourceStatus'
+        administratori:
+          type: array
+          items:
+            $ref: '#/components/schemas/PersonSummary'
+        disponibilitateCurenta:
+          $ref: '#/components/schemas/CurrentAvailability'
+    ResourcePage:
+      allOf:
+        - $ref: '#/components/schemas/PageInfo'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Resource'
+    ScheduleInterval:
+      type: object
+      required: [ziSaptamana, oraDeschidere, oraInchidere]
+      properties:
+        ziSaptamana:
+          type: integer
+          minimum: 1
+          maximum: 7
+          description: 1 = luni, 7 = duminică
+        oraDeschidere:
+          type: string
+          pattern: '^([01][0-9]|2[0-3]):(00|30)$'
+          example: '08:00'
+        oraInchidere:
+          type: string
+          pattern: '^([01][0-9]|2[0-3]):(00|30)$'
+          example: '22:00'
+    Slot:
+      type: object
+      required: [start, end, status, locuriOcupate, locuriTotale]
+      properties:
+        start:
+          type: string
+          format: date-time
+        end:
+          type: string
+          format: date-time
+        status:
+          $ref: '#/components/schemas/SlotStatus'
+        locuriOcupate:
+          type: integer
+          description: Numărul de echipe din slot, inclusiv cererile în așteptare
+        locuriTotale:
+          type: integer
+    MaintenanceWindowInput:
+      type: object
+      required: [dataInceput, dataSfarsit, motiv]
+      properties:
+        dataInceput:
+          type: string
+          format: date-time
+        dataSfarsit:
+          type: string
+          format: date-time
+        motiv:
+          type: string
+          minLength: 1
+          example: Calibrare anuală
+    MaintenanceWindow:
+      allOf:
+        - $ref: '#/components/schemas/MaintenanceWindowInput'
+        - type: object
+          required: [id, resourceId]
+          properties:
+            id:
+              type: integer
+              format: int64
+            resourceId:
+              type: integer
+              format: int64
+    MaintenanceWindowCreated:
+      allOf:
+        - $ref: '#/components/schemas/MaintenanceWindow'
+        - type: object
+          required: [rezervariDeReanalizat]
+          properties:
+            rezervariDeReanalizat:
+              type: array
+              description: Rezervările din interval, marcate pentru reanalizare
+              items:
+                type: integer
+                format: int64
+    ReservationInput:
+      type: object
+      required: [resourceId, start, end, echipa]
+      properties:
+        resourceId:
+          type: integer
+          format: int64
+        start:
+          type: string
+          format: date-time
+          example: '2026-11-13T08:00:00+02:00'
+        end:
+          type: string
+          format: date-time
+          example: '2026-11-13T10:00:00+02:00'
+        echipa:
+          type: string
+          maxLength: 150
+          description: Numele echipei; dacă nu există încă, echipa este creată automat
+          example: Echipa Robotică
+        scop:
+          type: string
+          nullable: true
+          example: Printare piese
+    Reservation:
+      type: object
+      required: [id, resource, solicitant, echipa, start, end, status, primaRezervare, necesitaInstruire, instruireFinalizata, necesitaReanalizare, dataCreare]
+      properties:
+        id:
+          type: integer
+          format: int64
+        resource:
+          $ref: '#/components/schemas/ResourceSummary'
+        solicitant:
+          $ref: '#/components/schemas/PersonSummary'
+        echipa:
+          type: string
+        start:
+          type: string
+          format: date-time
+        end:
+          type: string
+          format: date-time
+        scop:
+          type: string
+          nullable: true
+        status:
+          $ref: '#/components/schemas/ReservationStatus'
+        primaRezervare:
+          type: boolean
+          description: Indicatorul afișat administratorului
+        necesitaInstruire:
+          type: boolean
+        instruireFinalizata:
+          type: boolean
+        necesitaReanalizare:
+          type: boolean
+        motivRespingere:
+          type: string
+          nullable: true
+        dataCreare:
+          type: string
+          format: date-time
+        dataDecizie:
+          type: string
+          format: date-time
+          nullable: true
+    ResourceSummary:
+      type: object
+      required: [id, nume, tip]
+      properties:
+        id:
+          type: integer
+          format: int64
+        nume:
+          type: string
+        tip:
+          $ref: '#/components/schemas/ResourceType'
+        locatie:
+          type: string
+          nullable: true
+    ReservationPage:
+      allOf:
+        - $ref: '#/components/schemas/PageInfo'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Reservation'
+    RescheduleInput:
+      type: object
+      required: [start, end]
+      properties:
+        start:
+          type: string
+          format: date-time
+        end:
+          type: string
+          format: date-time
+    RejectInput:
+      type: object
+      required: [motiv]
+      properties:
+        motiv:
+          type: string
+          minLength: 1
+          example: Sala este rezervată pentru examen.
+    ApprovalStats:
+      type: object
+      required: [inAsteptare, aprobateLunaAceasta, resurseRezervateAzi]
+      properties:
+        inAsteptare:
+          type: integer
+        aprobateLunaAceasta:
+          type: integer
+        resurseRezervateAzi:
+          type: integer
+    TeamUsage:
+      type: object
+      required: [teamId, echipa, numarRezervari, oreRezervate]
+      properties:
+        teamId:
+          type: integer
+          format: int64
+        echipa:
+          type: string
+        numarRezervari:
+          type: integer
+        oreRezervate:
+          type: number
+          format: float
+    WaitlistInput:
+      type: object
+      required: [resourceId, start, end]
+      properties:
+        resourceId:
+          type: integer
+          format: int64
+        start:
+          type: string
+          format: date-time
+        end:
+          type: string
+          format: date-time
+    WaitlistEntry:
+      allOf:
+        - $ref: '#/components/schemas/WaitlistInput'
+        - type: object
+          required: [id, dataInscriere, notificat]
+          properties:
+            id:
+              type: integer
+              format: int64
+            dataInscriere:
+              type: string
+              format: date-time
+            notificat:
+              type: boolean
