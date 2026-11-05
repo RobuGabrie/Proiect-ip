@@ -42,6 +42,26 @@ npm run dev
 
 Testele backend-ului: `cd backend && .venv/bin/python -m pytest`
 
+## Migrări
+
+Modelele sunt în `backend/app/models.py`, iar migrările în `backend/migrations`. După modificarea modelelor:
+
+```bash
+cd backend
+.venv/bin/alembic revision --autogenerate -m "descriere"
+.venv/bin/alembic upgrade head
+```
+
+- Bază de date goală: `.venv/bin/alembic upgrade head` creează schema completă.
+- Bază creată din `db/schema.sql` (cazul Docker Compose): rulați o singură dată `.venv/bin/alembic stamp 0001`, altfel prima migrare încearcă să recreeze tabelele.
+
+Testele migrărilor au nevoie de o bază de date goală, separată, și se sar dacă `TEST_DATABASE_URL` lipsește. Conținutul ei este șters la fiecare rulare:
+
+```bash
+docker compose exec db createdb -U rrm rrm_test
+TEST_DATABASE_URL=postgresql+psycopg://rrm:rrm_dev@localhost:5432/rrm_test .venv/bin/python -m pytest
+```
+
 ## Documente
 
 - `docs/api/openapi.yaml`: specificația API; se deschide în https://editor.swagger.io/
