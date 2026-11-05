@@ -4,7 +4,7 @@
 
 API-ul respectă specificația OpenAPI 3.0 și are 25 de rute și 35 de operații, grupate după componentele din diagrama de componente: Auth, Users, Categories, Resources, Reservations, Approvals și Waitlist.
 
-Autentificarea se face exclusiv cu Google: frontend-ul trimite ID token-ul la `POST /auth/google`, iar backend-ul răspunde cu un JWT transmis ulterior ca `Authorization: Bearer`.
+Autentificarea se face exclusiv cu Google, doar cu conturi instituționale @student.usv.ro: frontend-ul trimite ID token-ul la `POST /auth/google`, iar backend-ul răspunde cu un JWT transmis ulterior ca `Authorization: Bearer`.
 
 ## 2. Tehnologii backend (9.3)
 
@@ -17,7 +17,7 @@ Autentificarea se face exclusiv cu Google: frontend-ul trimite ID token-ul la `P
 | Bază de date | PostgreSQL 16 | Date puternic relaționate, tranzacții și blocări de rând pentru evitarea suprapunerilor |
 | Autentificare | Google OpenID Connect, JWT | Cerință: „Sign in with Google” ca unică metodă |
 | Teste | pytest | Testarea regulilor de rezervare |
-| Mediu local | Docker Compose | Pornește baza de date cu o singură comandă |
+| Mediu local | Docker Compose | Pornește baza de date, backend-ul și frontend-ul cu o singură comandă |
 
 ## 3. Tehnologii frontend (9.4)
 
@@ -73,3 +73,7 @@ Conform cerinței din Laboratorul 1.
 | Claude Code (Claude Opus 5.5) | Analiza laboratoarelor și a documentației din Confluence și Jira; identificarea pașilor pentru Laboratorul 5 | „ok i ve loaded all the labs, I want u to analyze them precisely and what we have on confluence and tell me next steps to solve lab5” | 05.11.2026 |
 | Claude Code (Claude Opus 5.5) | Ciorne pentru ERD, specificația OpenAPI și scripturile bazei de date | „we want to use fastapi postgresl and nextjs” | 05.11.2026 |
 | Claude Code (Claude Opus 5.5) | Redactarea acestei pagini și actualizarea sarcinilor din Jira | „go ahead” | 05.11.2026 |
+| Claude Code (Claude Opus 5.5) | Inițializarea proiectelor FastAPI și Next.js, modelele SQLAlchemy și migrările Alembic | „lets o start implementing the app did u make the swagger?” | 05.11.2026 |
+| Claude Code (Claude Opus 5.5) | Autentificarea Google, restricționată la conturile @student.usv.ro | „yes only student emails, also lets comit and merge all branches into one” | 05.11.2026 |
+| Claude Code (Claude Opus 5.5) | Implementarea funcționalităților MVP (backend și frontend) și a testelor automate | „it works, now lets finish the app, only login is done what is left ot finish the app” | 05.11.2026 |
+| Claude Code (Claude Opus 5.5) | Actualizarea acestei pagini și a stării sarcinilor din Jira | „yes to the first 2 points, 3rd is ok like now dont modify domains” | 05.11.2026 |
