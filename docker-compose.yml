@@ -24,6 +24,9 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg://rrm:${POSTGRES_PASSWORD:-rrm_dev}@db:5432/rrm
       CORS_ORIGINS: http://localhost:3000
+      GOOGLE_CLIENT_ID: &google_client_id 57335626323-6lac5g6c3r0d029midppknls33lv0hmi.apps.googleusercontent.com
+      # Valoare doar pentru dezvoltare locală.
+      JWT_SECRET: ${JWT_SECRET:-local-development-only-secret-do-not-deploy}
     ports:
       - "127.0.0.1:8000:8000"
     volumes:
@@ -36,6 +39,7 @@ services:
     build: ./frontend
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:8000
+      NEXT_PUBLIC_GOOGLE_CLIENT_ID: *google_client_id
     ports:
       - "127.0.0.1:3000:3000"
     volumes:

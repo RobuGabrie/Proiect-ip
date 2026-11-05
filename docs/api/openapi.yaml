@@ -40,7 +40,9 @@ paths:
     post:
       tags: [Auth]
       summary: Autentificare cu un ID token Google
-      description: La prima autentificare se creează utilizatorul, cu rolul implicit `STUDENT`.
+      description: |
+        Sunt acceptate doar conturile instituționale @student.usv.ro. La prima autentificare se
+        creează utilizatorul, cu rolul implicit `STUDENT`.
       operationId: loginWithGoogle
       security: []
       requestBody:
@@ -60,6 +62,12 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
   /users/me:
     get:
       tags: [Users]
@@ -1011,11 +1019,25 @@ components:
               value:
                 code: TRANZITIE_INTERZISA
                 message: Cererea a fost anulată între timp.
+            contExistent:
+              summary: Email folosit de alt cont Google
+              value:
+                code: CONT_EXISTENT
+                message: Emailul este deja asociat altui cont Google.
             suprapunereMentenanta:
               summary: Mentenanțe suprapuse
               value:
                 code: SUPRAPUNERE_MENTENANTA
                 message: Intervalul se suprapune cu o altă mentenanță.
+    ServiceUnavailable:
+      description: Un serviciu extern necesar nu răspunde
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: GOOGLE_INDISPONIBIL
+            message: Autentificarea Google nu este disponibilă momentan.
     BusinessRule:
       description: Cererea este validă, dar încalcă o regulă de business
       content:

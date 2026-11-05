@@ -1,8 +1,12 @@
-from fastapi import FastAPI, Response, status
+from fastapi import FastAPI, Request, Response, status
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app import database
 from app.config import settings
+from app.controllers import auth, users
+from app.errors import ApiError
 
 API_PREFIX = "/api/v1"
 
@@ -20,6 +24,24 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(auth.router, prefix=API_PREFIX)
+app.include_router(users.router, prefix=API_PREFIX)
+
+
+@app.exception_handler(ApiError)
+def handle_api_error(_: Request, error: ApiError) -> JSONResponse:
+    return JSONResponse(status_code=error.status_code, content={"code": error.code, "message": error.message})
+
+
+@app.exception_handler(RequestValidationError)
+def handle_validation_error(_: Request, error: RequestValidationError) -> JSONResponse:
+    fields = ", ".join(str(item["loc"][-1]) for item in error.errors())
+    return JSONResponse(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        content={"code": "DATE_INVALIDE", "message": f"Date invalide: {fields}."},
+    )
+
 
 
 # Verificare tehnică a mediului, în afara contractului din docs/api/openapi.yaml.

@@ -1,0 +1,13 @@
+.button {
+  display: flex;
+  justify-content: center;
+  min-height: 44px;
+}
+
+.error {
+  margin: 16px 0 0;
+  color: #b42318;
+  font-size: 14px;
+  line-height: 1.4;
+  text-align: center;
+}

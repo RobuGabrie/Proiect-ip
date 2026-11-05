@@ -30,6 +30,7 @@ cd backend
 python3.12 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 cp .env.example .env
+# completați JWT_SECRET în .env
 .venv/bin/uvicorn app.main:app --reload
 ```
 
@@ -41,6 +42,16 @@ npm run dev
 ```
 
 Testele backend-ului: `cd backend && .venv/bin/python -m pytest`
+
+## Autentificare Google
+
+În Google Cloud Console, clientul OAuth trebuie să aibă `http://localhost:3000` la „Authorized JavaScript origins”, altfel butonul de conectare dă eroare.
+
+Sunt acceptate doar conturile instituționale `@student.usv.ro` (setarea `GOOGLE_ALLOWED_DOMAIN`). Orice cont nou primește rolul `STUDENT`. Primul administrator se setează manual, după prima conectare:
+
+```bash
+docker compose exec db psql -U rrm -d rrm -c "UPDATE users SET role = 'ADMIN' WHERE email = 'adresa@student.usv.ro'"
+```
 
 ## Migrări
 

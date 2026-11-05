@@ -1,13 +1,12 @@
-import os
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
 
 import pytest
 from alembic import command
-from alembic.config import Config
-from sqlalchemy import create_engine, inspect, select, text
+from sqlalchemy import inspect, select, text
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.orm import Session
+
+from tests.conftest import BACKEND_DIR, needs_database
 
 from app.models import (
     Base,
@@ -20,30 +19,9 @@ from app.models import (
     User,
 )
 
-BACKEND_DIR = Path(__file__).resolve().parents[1]
-TEST_DATABASE_URL = os.environ.get("TEST_DATABASE_URL")
-
-pytestmark = pytest.mark.skipif(not TEST_DATABASE_URL, reason="TEST_DATABASE_URL lipsește")
+pytestmark = needs_database
 
 START = datetime(2026, 12, 1, 8, 0, tzinfo=timezone.utc)
-
-
-@pytest.fixture
-def alembic_config():
-    config = Config(BACKEND_DIR / "alembic.ini")
-    config.set_main_option("script_location", str(BACKEND_DIR / "migrations"))
-    config.set_main_option("sqlalchemy.url", TEST_DATABASE_URL.replace("%", "%%"))
-    return config
-
-
-@pytest.fixture
-def engine():
-    engine = create_engine(TEST_DATABASE_URL)
-    with engine.begin() as connection:
-        connection.execute(text("DROP SCHEMA public CASCADE"))
-        connection.execute(text("CREATE SCHEMA public"))
-    yield engine
-    engine.dispose()
 
 
 def add_resource(session: Session, max_teams: int = 1) -> tuple[Resource, User, Team]:
