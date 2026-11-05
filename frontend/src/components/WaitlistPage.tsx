@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { useState } from "react";
 import { apiFetch, apiSend, errorMessage, type Resource, type WaitlistEntry } from "@/lib/api";
-import { formatDate, formatRange } from "@/lib/format";
+import { formatRange } from "@/lib/format";
 import { useLoad } from "@/lib/useLoad";
-import { Badge, Empty, ErrorNote, Icon, Loading, PageHeader } from "./ui";
+import { Badge, DateLeaf, Empty, ErrorNote, Loading, PageHeader } from "./ui";
 
 export function WaitlistPage() {
   const [actionError, setActionError] = useState("");
@@ -40,14 +40,10 @@ export function WaitlistPage() {
         <div className="list">
           {data.entries.map((entry) => (
             <article className="card row" key={entry.id}>
-              <div className="tile">
-                <Icon name="clock" size={20} />
-              </div>
+              <DateLeaf date={entry.start} />
               <div className="row-main">
-                <div className="row-title">{data.names.get(entry.resourceId)}</div>
-                <div className="row-subtitle">
-                  {formatDate(entry.start)}, {formatRange(entry.start, entry.end)}
-                </div>
+                <div className="row-title row-title-large">{data.names.get(entry.resourceId)}</div>
+                <div className="row-subtitle">{formatRange(entry.start, entry.end)}</div>
               </div>
               {entry.notificat ? <Badge tone="green">Interval eliberat</Badge> : <Badge tone="orange">În așteptare</Badge>}
               <div className="row-actions">

@@ -143,6 +143,7 @@ export function ResourceCalendar({ resourceId }: { resourceId: string }) {
     `${resourceId}/${monday}`,
   );
 
+  const today = localDay(new Date());
   const days = Array.from({ length: 7 }, (_, index) => addDays(monday, index));
   const byDay = new Map<string, Map<string, Slot>>();
   const times = new Set<string>();
@@ -213,7 +214,7 @@ export function ResourceCalendar({ resourceId }: { resourceId: string }) {
         <ResourceStatusBadge resource={details} />
       </header>
 
-      <section className="card section">
+      <section className="glass section">
         <div className="detail-grid">
           <Detail label="Program">{formatSchedule(schedule)}</Detail>
           <Detail label="Responsabil">{details.administratori.map(fullName).join(", ") || "—"}</Detail>
@@ -228,7 +229,7 @@ export function ResourceCalendar({ resourceId }: { resourceId: string }) {
       <SuccessNote message={message} />
       <ErrorNote message={error || slots.error} />
 
-      <section className="card section">
+      <section className="glass section">
         <div className="calendar-toolbar">
           <div className="calendar-nav">
             <button
@@ -279,10 +280,9 @@ export function ResourceCalendar({ resourceId }: { resourceId: string }) {
                 <tr>
                   <th className="time-cell" aria-label="Ora" />
                   {days.map((day, index) => (
-                    <th key={day} scope="col">
-                      {dayName(index + 1)}
-                      <br />
-                      {day.slice(8, 10)}.{day.slice(5, 7)}
+                    <th key={day} scope="col" className={day === today ? "day-today" : undefined}>
+                      <span>{dayName(index + 1)}</span>
+                      <strong>{Number(day.slice(8, 10))}</strong>
                     </th>
                   ))}
                 </tr>
@@ -290,7 +290,7 @@ export function ResourceCalendar({ resourceId }: { resourceId: string }) {
               <tbody>
                 {orderedTimes.map((time, index) => (
                   <tr key={time}>
-                    <th scope="row" className="time-cell">
+                    <th scope="row" className={time.endsWith(":00") ? "time-cell time-hour" : "time-cell"}>
                       {time}
                     </th>
                     {days.map((day) => {
@@ -306,6 +306,8 @@ export function ResourceCalendar({ resourceId }: { resourceId: string }) {
                       const isSelected =
                         selection?.day === day && index >= selection.first && index <= selection.last;
                       const classes = ["slot", isSelected ? "slot-selected" : `slot-${slot.status}`];
+                      if (isSelected && selection?.first === index) classes.push("slot-first");
+                      if (isSelected && selection?.last === index) classes.push("slot-last");
                       if (past) classes.push("slot-past");
                       return (
                         <td key={day}>
@@ -315,9 +317,11 @@ export function ResourceCalendar({ resourceId }: { resourceId: string }) {
                             disabled={past || slot.status === "MENTENANTA"}
                             aria-pressed={isSelected}
                             aria-label={`${dayName(days.indexOf(day) + 1)} ${time}, ${SLOT_LABELS[slot.status]}`}
-                            title={`${time} · ${slot.locuriOcupate}/${slot.locuriTotale} echipe`}
+                            title={`${time}, ${slot.locuriOcupate} din ${slot.locuriTotale} echipe`}
                             onClick={() => clickSlot(day, index)}
-                          />
+                          >
+                            {isSelected && selection?.first === index ? time : null}
+                          </button>
                         </td>
                       );
                     })}

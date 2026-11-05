@@ -22,7 +22,7 @@ const DAYS = [1, 2, 3, 4, 5, 6, 7];
 
 function TimeSelect({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
   return (
-    <select aria-label={label} className="select" style={{ minHeight: 36, width: "100%" }} value={value} onChange={(event) => onChange(event.target.value)}>
+    <select aria-label={label} className="select" value={value} onChange={(event) => onChange(event.target.value)}>
       {HALF_HOURS.map((time) => (
         <option key={time} value={time}>
           {time}
@@ -59,7 +59,7 @@ function ScheduleEditor({ resourceId, initial }: { resourceId: string; initial: 
   }
 
   return (
-    <section className="card section">
+    <section className="glass section">
       <h2>Program de funcționare</h2>
       <SuccessNote message={message} />
       <ErrorNote message={error} />
@@ -68,7 +68,7 @@ function ScheduleEditor({ resourceId, initial }: { resourceId: string; initial: 
           <select
             aria-label={`Ziua intervalului ${index + 1}`}
             className="select"
-            style={{ minHeight: 36, width: "100%" }}
+           
             value={interval.ziSaptamana}
             onChange={(event) => change(index, { ziSaptamana: Number(event.target.value) })}
           >
@@ -167,7 +167,7 @@ function MaintenanceEditor({ resourceId }: { resourceId: string }) {
   }
 
   return (
-    <section className="card section">
+    <section className="glass section">
       <h2>Mentenanță</h2>
       <SuccessNote message={message} />
       <ErrorNote message={error || actionError} />

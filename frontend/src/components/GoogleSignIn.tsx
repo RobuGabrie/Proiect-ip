@@ -71,7 +71,8 @@ export function GoogleSignIn() {
       size: "large",
       text: "continue_with",
       locale: "ro",
-      width: 358,
+      logo_alignment: "center",
+      width: Math.min(buttonRef.current.clientWidth, 300),
     });
   }
 

@@ -119,11 +119,8 @@ function ResourceRow({ resource }: { resource: Resource }) {
   return (
     <article className="card">
       <div className="row">
-        <div className="tile">
-          <Icon name={resource.tip === "SALA" ? "room" : "chip"} size={20} />
-        </div>
         <div className="row-main">
-          <div className="row-title">{resource.nume}</div>
+          <div className="row-title row-title-large">{resource.nume}</div>
           <div className="row-subtitle">{resourceSummary(resource)}</div>
         </div>
         <ResourceStatusBadge resource={resource} />

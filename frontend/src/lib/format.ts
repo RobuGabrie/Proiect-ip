@@ -34,6 +34,16 @@ export function formatDate(value: string | Date): string {
   return longDate.format(new Date(value));
 }
 
+export function dayOfMonth(value: string | Date): string {
+  return String(Number(localDay(value).slice(8, 10)));
+}
+
+const monthFormat = new Intl.DateTimeFormat("ro-RO", { timeZone: TIME_ZONE, month: "long" });
+
+export function monthName(value: string | Date): string {
+  return monthFormat.format(new Date(value));
+}
+
 export function formatRange(start: string, end: string): string {
   return `${localTime(start)} – ${localTime(end)}`;
 }
@@ -116,7 +126,7 @@ export function resourceSummary(resource: Resource): string {
   } else if (resource.locatie) {
     parts.push(resource.locatie);
   }
-  return parts.filter(Boolean).join(" · ");
+  return parts.filter(Boolean).join(", ");
 }
 
 export function isActiveReservation(status: ReservationStatus): boolean {

@@ -52,11 +52,9 @@ export function AppShell({ children }: { children: ReactNode }) {
       <aside className={menuOpen ? "sidebar sidebar-open" : "sidebar"}>
         <div className="sidebar-top">
           <Link href={homePath(user)} className="brand">
-            <span className="brand-logo">R</span>
-            <span>
-              <small>{isAdmin ? "ADMIN" : "RESEARCH"}</small>
-              <strong>Resource Manager</strong>
-            </span>
+            Research
+            <br />
+            Resource Manager
           </Link>
           <button
             type="button"
@@ -69,7 +67,6 @@ export function AppShell({ children }: { children: ReactNode }) {
           </button>
         </div>
         <nav className="sidebar-nav" aria-label="Meniu principal">
-          <span className="sidebar-title">{isAdmin ? "ADMINISTRARE" : "MENIU"}</span>
           {menu.map((item) => (
             <Link
               key={item.href}

@@ -11,10 +11,10 @@ import {
   type Reservation,
   type ReservationStatus,
 } from "@/lib/api";
-import { formatDate, formatRange, fullName, initials, isActiveReservation, localDay, localTime, toInstant } from "@/lib/format";
+import { formatDate, formatRange, fullName, isActiveReservation, localDay, localTime, toInstant } from "@/lib/format";
 import { useLoad } from "@/lib/useLoad";
 import { ReservationBadge } from "./ReservationBadge";
-import { Badge, Detail, Dialog, Empty, ErrorNote, Loading, PageHeader, SearchBox, Tabs } from "./ui";
+import { Badge, DateLeaf, Detail, Dialog, Empty, ErrorNote, Loading, PageHeader, SearchBox, Tabs } from "./ui";
 
 type Filter = "" | ReservationStatus;
 
@@ -239,22 +239,21 @@ export function ApprovalsPage() {
       <PageHeader
         title="Aprobări"
         subtitle="Revizuiește cererile de rezervare primite."
-        count={stats.data ? `${stats.data.inAsteptare} în așteptare` : undefined}
       />
-      <div className="stats">
-        <div className="card stat">
-          <span>În așteptare</span>
-          <strong>{stats.data?.inAsteptare ?? "–"}</strong>
+      <dl className="stats">
+        <div className="stat">
+          <dd>{stats.data?.inAsteptare ?? "–"}</dd>
+          <dt>în așteptare</dt>
         </div>
-        <div className="card stat">
-          <span>Aprobate luna aceasta</span>
-          <strong>{stats.data?.aprobateLunaAceasta ?? "–"}</strong>
+        <div className="stat">
+          <dd>{stats.data?.aprobateLunaAceasta ?? "–"}</dd>
+          <dt>aprobate luna aceasta</dt>
         </div>
-        <div className="card stat">
-          <span>Resurse rezervate azi</span>
-          <strong>{stats.data?.resurseRezervateAzi ?? "–"}</strong>
+        <div className="stat">
+          <dd>{stats.data?.resurseRezervateAzi ?? "–"}</dd>
+          <dt>resurse rezervate azi</dt>
         </div>
-      </div>
+      </dl>
       <div className="toolbar">
         <SearchBox value={q} onChange={setQ} placeholder="Caută după solicitant sau resursă…" />
         <Tabs
@@ -277,17 +276,17 @@ export function ApprovalsPage() {
         <div className="list">
           {data.items.map((reservation) => (
             <article className="card row" key={reservation.id}>
-              <div className="tile avatar">{initials(reservation.solicitant)}</div>
+              <DateLeaf date={reservation.start} />
               <div className="row-main">
-                <div className="row-title">
+                <div className="row-title row-title-large">
                   {reservation.resource.nume}
                   {reservation.resource.locatie &&
                     reservation.resource.locatie !== reservation.resource.nume &&
-                    ` · ${reservation.resource.locatie}`}
+                    `, ${reservation.resource.locatie}`}
                 </div>
                 <div className="row-subtitle">
-                  {fullName(reservation.solicitant)} · {reservation.echipa} · {formatDate(reservation.start)} ·{" "}
-                  {formatRange(reservation.start, reservation.end)}
+                  {formatRange(reservation.start, reservation.end)}, {fullName(reservation.solicitant)},{" "}
+                  {reservation.echipa}
                 </div>
               </div>
               <div className="row-badges">

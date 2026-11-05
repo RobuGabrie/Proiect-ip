@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { apiSend, errorMessage, type User } from "@/lib/api";
-import { fullName, initials, ROLE_LABELS } from "@/lib/format";
+import { fullName, ROLE_LABELS } from "@/lib/format";
 import { useAuth } from "./AuthProvider";
 import { Detail, ErrorNote, PageHeader, SuccessNote } from "./ui";
 
@@ -30,15 +30,10 @@ export function ProfilePage() {
   return (
     <>
       <PageHeader title="Profil" subtitle="Gestionează datele contului." />
-      <section className="card section" style={{ maxWidth: 680 }}>
-        <div className="row" style={{ padding: "0 0 20px" }}>
-          <div className="tile avatar" style={{ width: 64, height: 64, fontSize: 22 }}>
-            {initials(user)}
-          </div>
-          <div className="row-main">
-            <div className="row-title">{fullName(user)}</div>
-            <div className="row-subtitle">{user.email}</div>
-          </div>
+      <section className="glass section profile-card">
+        <div className="profile-head">
+          <div className="profile-name">{fullName(user)}</div>
+          <div className="row-subtitle">{user.email}</div>
         </div>
         <SuccessNote message={message} />
         <ErrorNote message={error} />

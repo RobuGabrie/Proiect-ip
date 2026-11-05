@@ -5,7 +5,7 @@ test.describe("acces", () => {
   test("vizitatorul este trimis la conectare, cu butonul Google", async ({ page }) => {
     await page.goto("/sali");
     await expect(page).toHaveURL(/\/login$/);
-    await expect(page.getByRole("heading", { name: "Conectare" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Research Resource Manager" })).toBeVisible();
     // Google ascunde butonul pe originile neautorizate, iar portul de test nu este autorizat.
     await expect(page.locator('iframe[src*="accounts.google.com"]')).toHaveCount(1);
     await expect(page.getByLabel(/parol/i)).toHaveCount(0);

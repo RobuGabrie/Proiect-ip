@@ -5,7 +5,7 @@ import { apiFetch, apiSend, errorMessage, withQuery, type Page, type Reservation
 import { formatDate, formatRange, isActiveReservation } from "@/lib/format";
 import { useLoad } from "@/lib/useLoad";
 import { ReservationBadge } from "./ReservationBadge";
-import { Detail, Dialog, Empty, ErrorNote, Icon, Loading, PageHeader, SearchBox, Tabs } from "./ui";
+import { DateLeaf, Detail, Dialog, Empty, ErrorNote, Loading, PageHeader, SearchBox, Tabs } from "./ui";
 
 type Filter = "" | ReservationStatus;
 
@@ -124,33 +124,18 @@ export function MyReservations() {
       {loading && !data ? (
         <Loading />
       ) : data && data.items.length > 0 ? (
-        <div className="reservation-grid">
+        <div className="list">
           {data.items.map((reservation) => (
-            <article className="card reservation-card" key={reservation.id}>
-              <div className="reservation-top">
-                <div className="tile">
-                  <Icon name={reservation.resource.tip === "SALA" ? "room" : "chip"} size={18} />
-                </div>
-                <ReservationBadge status={reservation.status} />
-              </div>
-              <div>
-                <div className="row-title">{reservation.resource.nume}</div>
+            <article className="card row" key={reservation.id}>
+              <DateLeaf date={reservation.start} />
+              <div className="row-main">
+                <div className="row-title row-title-large">{reservation.resource.nume}</div>
                 <div className="row-subtitle">
-                  {reservation.resource.tip === "SALA" ? "Sală" : "Echipament"}
-                  {reservation.resource.locatie && ` · ${reservation.resource.locatie}`}
+                  {formatRange(reservation.start, reservation.end)}, {reservation.echipa}
                 </div>
               </div>
-              <div className="reservation-when">
-                <span>
-                  <Icon name="calendar" size={16} />
-                  {formatDate(reservation.start)}
-                </span>
-                <span>
-                  <Icon name="clock" size={16} />
-                  {formatRange(reservation.start, reservation.end)}
-                </span>
-              </div>
-              <div className="reservation-actions">
+              <ReservationBadge status={reservation.status} />
+              <div className="row-actions">
                 <button type="button" className="btn" onClick={() => setDetails(reservation)}>
                   Detalii
                 </button>

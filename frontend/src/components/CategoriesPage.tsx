@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { apiFetch, apiSend, errorMessage, type Category } from "@/lib/api";
 import { useLoad } from "@/lib/useLoad";
-import { Dialog, Empty, ErrorNote, Icon, Loading, PageHeader } from "./ui";
+import { Dialog, Empty, ErrorNote, Loading, PageHeader } from "./ui";
 
 function CategoryDialog({
   category,
@@ -92,11 +92,8 @@ export function CategoriesPage() {
         <div className="list">
           {data.map((category) => (
             <article className="card row" key={category.id}>
-              <div className="tile">
-                <Icon name="tag" size={20} />
-              </div>
               <div className="row-main">
-                <div className="row-title">{category.nume}</div>
+                <div className="row-title row-title-large">{category.nume}</div>
                 {category.descriere && <div className="row-subtitle">{category.descriere}</div>}
               </div>
               <div className="row-actions">

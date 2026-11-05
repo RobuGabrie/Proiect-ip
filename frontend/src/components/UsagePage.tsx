@@ -35,7 +35,7 @@ export function UsagePage() {
       {loading && !data ? (
         <Loading />
       ) : data && data.length > 0 ? (
-        <div className="card table-wrap">
+        <div className="glass table-wrap">
           <table className="table">
             <thead>
               <tr>

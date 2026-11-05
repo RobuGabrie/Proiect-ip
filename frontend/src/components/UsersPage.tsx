@@ -41,7 +41,7 @@ export function UsersPage() {
       {loading && !data ? (
         <Loading />
       ) : data && data.items.length > 0 ? (
-        <div className="card table-wrap">
+        <div className="glass table-wrap">
           <table className="table">
             <thead>
               <tr>
@@ -57,8 +57,7 @@ export function UsersPage() {
                   <td>{user.email}</td>
                   <td>
                     <select
-                      className="select"
-                      style={{ minHeight: 36 }}
+                      className="select table-select"
                       aria-label={`Rol pentru ${fullName(user)}`}
                       value={user.role}
                       onChange={(event) => changeRole(user, event.target.value as Role)}

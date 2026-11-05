@@ -18,7 +18,7 @@ import { fullName, resourceSummary } from "@/lib/format";
 import { useLoad } from "@/lib/useLoad";
 import { useAuth } from "./AuthProvider";
 import { ResourceStatusBadge } from "./ResourceCatalog";
-import { Dialog, Empty, ErrorNote, Icon, Loading, PageHeader, SearchBox } from "./ui";
+import { Dialog, Empty, ErrorNote, Loading, PageHeader, SearchBox } from "./ui";
 
 const COPY: Record<ResourceType, { title: string; subtitle: string; add: string; unit: [string, string] }> = {
   SALA: {
@@ -259,11 +259,8 @@ export function AdminResources({ tip }: { tip: ResourceType }) {
             const mine = resource.administratori.some((admin) => admin.id === user?.id);
             return (
               <article className="card row" key={resource.id}>
-                <div className="tile">
-                  <Icon name={tip === "SALA" ? "room" : "chip"} size={20} />
-                </div>
                 <div className="row-main">
-                  <div className="row-title">{resource.nume}</div>
+                  <div className="row-title row-title-large">{resource.nume}</div>
                   <div className="row-subtitle">{resourceSummary(resource)}</div>
                 </div>
                 <ResourceStatusBadge resource={resource} />

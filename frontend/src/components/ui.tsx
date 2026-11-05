@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, type ReactNode } from "react";
+import { dayOfMonth, monthName } from "@/lib/format";
 
 const ICONS: Record<string, ReactNode> = {
   room: (
@@ -108,7 +109,7 @@ export function PageHeader({
         <p>{subtitle}</p>
       </div>
       <div className="page-header-actions">
-        {count && <span className="count-pill">{count}</span>}
+        {count && <span className="page-count">{count}</span>}
         {action}
       </div>
     </header>
@@ -210,7 +211,24 @@ export function SuccessNote({ message }: { message: string }) {
 }
 
 export function Loading() {
-  return <p className="muted-note">Se încarcă…</p>;
+  return (
+    <div className="loading" role="status">
+      <span className="sr-only">Se încarcă</span>
+      <i />
+      <i />
+      <i />
+    </div>
+  );
+}
+
+/** Data, ca într-un orar: elementul după care se citește un rând. */
+export function DateLeaf({ date }: { date: string }) {
+  return (
+    <time className="date-leaf" dateTime={date}>
+      <strong>{dayOfMonth(date)}</strong>
+      <span>{monthName(date)}</span>
+    </time>
+  );
 }
 
 export function Empty({ children }: { children: ReactNode }) {
